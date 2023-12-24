@@ -1,0 +1,84 @@
+#Area_ChatDisplay,
+#Area_ChatInput {
+    display: grid;
+    background-color: var(--use-color-c1);
+    gap: 5px;
+    position: absolute;
+    left: 50%;
+    width: 90vw;
+    border: solid 3px white;
+    transform: translate(-50%, 0%);
+    overflow-x: hidden;
+}
+
+#Area_ChatDisplay {
+    grid-template-columns: repeat(1, 1fr);
+    grid-template-rows: repeat(10, 1fr);
+    top: 2vh;
+    height: 60vh;
+    overflow-y: scroll;
+}
+
+#Area_ChatInput {
+    top: calc(62vh + 3px);
+    height: 15vh;
+    overflow-y: hidden;
+}
+
+.Item_ChatDisplay {
+    /* background-color: var(--use-color-b1); */
+    margin: 5px;
+    width: 50vw;
+    border-radius: 30px;
+    /* border: solid 3px var(--use-color-a1); */
+}
+
+.Chat_L {
+    position: relative;
+    left: 10px;
+    background-color: var(--use-color-b1);
+    border: solid 3px var(--use-color-a1);
+}
+
+.Chat_R {
+    position: relative;
+    left: calc(40vw - 40px);
+    color: white;
+    background-color: var(--use-color-a1);
+    border: solid 3px white;
+}
+
+.Chat_Select {
+    position: absolute;
+    top: 5%;
+    width: 40vw;
+    height: 4vh;
+    font-size: 24px;
+}
+
+.Chat_SelectL {
+    left: 2.5vw;
+}
+
+.Chat_SelectR {
+    right: 2.5vw;
+}
+
+.Chat_Input {
+    position: absolute;
+    top: 50%;
+    left: 2vw;
+    width: 55vw;
+    height: 4vh;
+    font-size: 24px;
+}
+
+.Chat_Submit {
+    position: absolute;
+    top: 50%;
+    right: 2vw;
+    width: 25vw;
+    height: 5vh;
+    font-size: 24px;
+    color: white;
+}

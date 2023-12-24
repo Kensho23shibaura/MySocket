@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+    <script type="text/javascript" src="/assets/util/areacontrol.js"></script>
+    <script type="text/javascript" src="/assets/util/audio.js"></script>
+    <script type="text/javascript" src="/assets/util/timer.js"></script>
+    <script type="text/javascript" src="/assets/util/popup.js"></script>
+    <script type="text/javascript" src="/assets/util/scrollbar.js"></script>
+    <link rel="stylesheet" href="/assets/util/default.css">
+    <link rel="stylesheet" href="/assets/util/popup.css">
+    <link rel="stylesheet" href="/assets/util/scrollbar.css">
+    <link rel="stylesheet" href="/assets/css/default.css">
+    <link rel="stylesheet" href="/assets/css/area.css">
+    <link rel="stylesheet" href="/assets/css/chat.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Quiz Game App</title>
+</head>
+
+<body class="default_text">
+    <div id="Area_Top">
+        <div id="showClock" class="shadow"></div>
+        <button id="connectsBtn" class="Btn action_button default_text small_text">接続数:<span id="connectedClients">0</span>人</button>
+        <button id="muteBtn" class="Btn action_button default_text small_text" onclick="mute(this)">🔇消音</button>
+        <button id="clientNameDisplay" class="Btn action_button default_text small_text">管理者</button>
+    </div>
+    <div id="Area_Tab">
+        <div class="Item_Tab_Area">
+            <button id="Item_TabA" class="Item_Tab FullSize Btn default_text Selected"
+                onclick="selectTab('Area_Show', 'Item_Tab', 'A');">Tab A</button>
+        </div>
+        <div class="Item_Tab_Area">
+            <button id="Item_TabB" class="Item_Tab FullSize Btn default_text"
+                onclick="selectTab('Area_Show', 'Item_Tab', 'B');">Tab B</button>
+        </div>
+        <div class="Item_Tab_Area">
+            <button id="Item_TabC" class="Item_Tab FullSize Btn default_text"
+                onclick="selectTab('Area_Show', 'Item_Tab', 'C');">チャット</button>
+        </div>
+    </div>
+    <div id="Area_ShowA" class="Area_Show"></div>
+    <div id="Area_ShowB" class="Area_Show" style="display: none;"></div>
+    <div id="Area_ShowC" class="Area_Show" style="display: none;">
+        <div id="Area_ChatDisplay"></div>
+        <div id="Area_ChatInput">
+            <div class="Chat_Select Chat_SelectL">
+                <input type="radio" id="messageToAll" name="messageTo" value="All" checked>
+                <label for="messageToAll">全体向け</label>
+            </div>
+            <div class="Chat_Select Chat_SelectR">
+                <input type="radio" id="messageToHost" name="messageTo" value="Host" disabled>
+                <label for="messageToHost">管理者向け</label>
+            </div>
+            <input type="text" id="message" name="message" class="Chat_Input" required>
+            <button class="Chat_Submit Btn default_text" onclick="sendChat()">送信</button>
+        </div>
+    </div>
+
+    <style>
+    </style>
+    <script>
+        setInterval('showClock("showClock")', 1000);
+
+        var muting = true;
+        function mute(obj) {
+            if (muting == true) {
+                muting = false;
+                obj.innerHTML = "🎵 通知中 "
+            } else if (muting == false) {
+                stopAllAlarms();
+                muting = true;
+                obj.innerHTML = "🔇消音";
+            }
+        }
+
+        // サーバーからのメッセージを受信
+        const socket = io();
+        socket.on('showChatToAll', (data) => {
+            let myname = document.getElementById('clientNameDisplay').innerHTML
+            if (data.username != myname) {
+                banner('メッセージ受信', `${data.username}さん: ${data.message}`);
+                addChatTile("Other", "Me", data.username, data.message);
+            }else{
+                addChatTile("Me", "All", "管理者", data.message);
+            }
+        });
+        socket.on('showChatToHost', (data) => {
+            banner('DM受信', `${data.username}さん: ${data.message}`);
+            addChatTile("Other", "Me", data.username, data.message);
+        });
+
+        // チャット送信
+        async function sendChat() {
+            const message = document.getElementById('message').value;
+            // const clientId = document.getElementById('clientIdDisplay').innerText;
+
+            // チェックされているラジオボタンのvalueを取得
+            var radioButtons = document.getElementsByName('messageTo');
+            var messageTo;
+            for (var i = 0; i < radioButtons.length; i++) {
+                if (radioButtons[i].checked) {
+                    messageTo = radioButtons[i].value;
+                    break;
+                }
+            }
+
+            try {
+                // サーバーにメッセージを送信
+                const response = await fetch(`/broadcastTo${messageTo}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `message=${encodeURIComponent(message)}`,
+                });
+
+                if (response.ok) {
+                    banner('送信成功', 'メッセージを送信しました。');
+                } else {
+                    banner('送信失敗', 'もう一度やり直してください。');
+                }
+            } catch (error) {
+                console.error('送信エラー:', error);
+            }
+        }
+
+        function addChatTile(From = "Host", To = "Me", Name, Message) {
+            var ChatTile = document.createElement('div');
+            if (From == "Me") {
+                ChatTile.className = 'Item_ChatDisplay Chat_R';
+            } else if (From == "Host") {
+                ChatTile.className = 'Item_ChatDisplay Chat_L';
+            } else if (From == "Other") {
+                ChatTile.className = 'Item_ChatDisplay Chat_L';
+            }
+            const currentDate = new Date();
+            const formattedTime = currentDate.toLocaleTimeString('en-US', { hour12: false });
+            ChatTile.innerHTML = `${Name}さん (${formattedTime})<br>${Message}`;
+            document.getElementById('Area_ChatDisplay').appendChild(ChatTile);
+        }
+
+        async function updateConnectedClientsCount() {
+            try {
+                // サーバーからクライアント数を取得
+                const response = await fetch('/connectedClients');
+                const data = await response.json();
+                // クライアント数を表示
+                document.getElementById('connectedClients').innerText = data.count;
+            } catch (error) {
+                console.error('接続数取得エラー:', error);
+            }
+        }
+        setInterval('updateConnectedClientsCount()', 1000);
+    </script>
+</body>
+
+</html>

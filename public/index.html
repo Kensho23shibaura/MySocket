@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="text/javascript" src="/assets/util/audio.js"></script>
+    <script type="text/javascript" src="/assets/util/timer.js"></script>
+    <script type="text/javascript" src="/assets/util/popup.js"></script>
+    <script type="text/javascript" src="/assets/util/scrollbar.js"></script>
+    <link rel="stylesheet" href="/assets/css/default.css">
+    <link rel="stylesheet" href="/assets/util/default.css">
+    <link rel="stylesheet" href="/assets/util/popup.css">
+    <link rel="stylesheet" href="/assets/util/scrollbar.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Quiz Game App</title>
+</head>
+
+<body class="default_text">
+    <div id="Area_Top">
+        <div id="showClock" class="shadow"></div>
+    </div>
+    <div id="Area_Login" class="">
+        <div class="Login_Title Login_Item">[Game Title] へ<br>ようこそ！</div>
+        <form action="/join" method="POST">
+            <div class="Login_Input Login_Item">
+                <label for="username" class="">プレイヤー名</label>
+                <input type="text" id="username" name="username" class="" required>
+            </div>
+            <button type="submit" class="Login_Submit Login_Item Btn default_text">参加</button>
+        </form>
+    </div>
+
+    <style>
+        #Area_Top {
+            display: flex;
+            position: absolute;
+            top: 0vh;
+            left: 0vw;
+            width: 100vw;
+            height: 6vh;
+        }
+
+        #showClock {
+            font-size: 16px;
+        }
+
+        #Area_Login {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: calc(80vw - 40px);
+            height: calc(40vh - 40px);
+            background-color: var(--use-color-a2);
+            color: white;
+            text-shadow: none;
+            text-align: center;
+            border: solid 3px white;
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        .Login_Item {
+            position: fixed;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+        }
+
+        .Login_Title {
+            top: 20%;
+        }
+
+        .Login_Input {
+            top: 50%;
+        }
+
+        .Login_Submit {
+            top: 80%;
+            width: 40vw;
+            height: 5vh;
+            color: white;
+        }
+
+        #username {
+            font-size: 24px;
+        }
+    </style>
+
+    <script>
+        setInterval('showClock("showClock")', 1000);
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,81 @@
+:root {
+    /*Item_Tabの最大数*/
+    --tab-amount: 3;
+}
+
+#Area_Top {
+    display: flex;
+    position: absolute;
+    top: 0vh;
+    left: 0vw;
+    width: 100vw;
+    height: 6vh;
+}
+
+#showClock {
+    font-size: 16px;
+}
+
+
+#connectsBtn,
+#muteBtn,
+#clientNameDisplay {
+    position: absolute;
+    top: 10%;
+    width: 15vw;
+    height: 5.5vh;
+    color: white;
+    font-size: 16px;
+}
+
+#connectsBtn {
+    left: 40vw;
+    width: 25vw;
+}
+
+#muteBtn {
+    left: 69vw;
+}
+
+#clientNameDisplay {
+    left: 84.5vw;
+}
+
+#Area_Tab {
+    display: grid;
+    grid-template-columns: repeat(var(--tab-amount), 1fr);
+    gap: 5px;
+    position: absolute;
+    top: 6vh;
+    left: 0vw;
+    width: 100vw;
+    height: 8vh;
+}
+
+#Area_Tab {
+    background-color: var(--use-color-a3);
+    border-top: 3px solid var(--use-color-a1);
+    border-bottom: 3px solid var(--use-color-a1);
+}
+
+.Item_Tab_Area {
+    margin: 5px;
+}
+
+.Item_Tab {
+    color: white;
+    font-size: 24px;
+}
+
+.FullSize {
+    width: 100%;
+    height: 100%;
+}
+
+.Area_Show {
+    position: absolute;
+    top: 18vh;
+    left: 1vw;
+    width: 98vw;
+    height: 80vh;
+}

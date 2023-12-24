@@ -1,0 +1,33 @@
+:root {
+    /*色指定*/
+    --use-color-a1: rgba(36, 50, 80, 1.0);
+    --use-color-a2: rgba(36, 50, 80, 0.9);
+    --use-color-a3: rgba(36, 50, 80, 0.5);
+    --use-color-b1: rgba(88, 94, 170, 0.8);
+    --use-color-b2: rgba(88, 94, 170, 0.9);
+    --use-color-c1: rgba(101, 154, 210, 0.7);
+}
+
+body {
+    background-color: black;
+    background-image: url("/assets/images/back.jpg");
+    background-size: cover;
+    user-select: none;
+}
+
+.Btn {
+    background-color: var(--use-color-a2);
+    color: white;
+    text-shadow: none;
+    text-align: center;
+    border: solid 3px white;
+    border-radius: 20px;
+}
+
+.Btn:hover {
+    background-color: var(--use-color-c1);
+}
+
+.Selected {
+    background-color: var(--use-color-c1);
+}
