@@ -17,9 +17,11 @@ app.use('/assets', express.static('public/assets', { maxAge: 86400000 }));
 // ***************************************************************************
 // ミドルウェアの実装
 const loggerMiddleware = function (req, res, next) {
+    const currentDate = new Date();
+    const formattedTime = currentDate.toLocaleTimeString('en-US');
     // サーバー側にアクセスログを表示
     if (req.url != '/connectedClients') {
-        console.log(`[${new Date()}] ${req.method} ${req.url}`);
+        console.log(`[${formattedTime}] ${req.method} ${req.url}`);
     }
     next(); // 次のミドルウェアへ処理を移す
 };
@@ -41,13 +43,16 @@ const saveUserData = (userData) => {
     fs.writeFileSync(userDataPath, JSON.stringify(userData, null, 2), 'utf8');
 };
 const generateUniqueId = () => {
-    return Math.random().toString(36).substring(7);
+    return Math.random().toString(36).substring(2);
 };
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ***************************************************************************
 // チャット情報の管理
+const chatData = {};
+let MessagesCount = 0;
+
 const chatDataPath = path.join(__dirname, 'chat_data.json');
 // const loadChatData = () => {
 //     try {
@@ -59,6 +64,21 @@ const chatDataPath = path.join(__dirname, 'chat_data.json');
 // };
 const saveChatData = (chatData) => {
     fs.writeFileSync(chatDataPath, JSON.stringify(chatData, null, 2), 'utf8');
+};
+
+// ***************************************************************************
+// 回答情報の管理
+const answerDataPath = path.join(__dirname, 'answer_data.json');
+const loadAnswerData = () => {
+    try {
+        const data = fs.readFileSync(answerDataPath, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        return {};
+    }
+};
+const saveAnswerData = (answerData) => {
+    fs.writeFileSync(answerDataPath, JSON.stringify(answerData, null, 2), 'utf8');
 };
 
 // ***************************************************************************
@@ -81,6 +101,8 @@ app.post('/join', (req, res) => {
     while (userData[clientId]) {
         clientId = generateUniqueId();
     }
+    // const token = 'aaaaaaaaaaaa'
+    // const level = 1
     userData[clientId] = { username };
     saveUserData(userData);
 
@@ -105,41 +127,6 @@ app.get('/game/:id', (req, res) => {
     fileContent = fileContent.replace('{clientId}', clientId);
     fileContent = fileContent.replace('{username}', username);
     res.send(fileContent);
-});
-
-// ***************************************************************************
-// ユーザ名とメッセージを保持する変数
-const chatData = {};
-let MessagesCount = 0;
-// ユーザからのメッセージ送信用(管理者向け)
-app.post('/sendChatToHost/:id', (req, res) => {
-    const { message } = req.body;
-    const clientId = req.params.id;
-    const userData = loadUserData();
-    const username = userData[clientId] ? userData[clientId].username : 'Unknown User';
-    // ユーザ名とメッセージを保存
-    chatData[MessagesCount] = { username, message };
-    MessagesCount++;
-    saveChatData(chatData);
-    // 管理者画面にユーザ名とメッセージを表示
-    io.emit('showChatToHost', { username, message });
-});
-// ユーザからのメッセージ送信用(全員向け)
-app.post('/sendChatToAll/:id', (req, res) => {
-    const { message } = req.body;
-    const clientId = req.params.id;
-    const userData = loadUserData();
-    const username = userData[clientId] ? userData[clientId].username : 'Unknown User';
-    if (!userData[clientId]) {
-        res.status(404).send('User not found.');
-        return;
-    }
-    // ユーザ名とメッセージを保存
-    chatData[MessagesCount] = { username, message };
-    MessagesCount++;
-    saveChatData(chatData);
-    // 管理者画面にユーザ名とメッセージを表示
-    io.emit('showChatToAll', { username, message });
 });
 
 // ***************************************************************************
@@ -175,39 +162,150 @@ app.get('/admin', (req, res) => {
 });
 
 // ***************************************************************************
-// 管理者からのメッセージ一斉送信用
-app.post('/broadcastToAll', (req, res) => {
-    if (req.session.authenticated) {
-        const { message } = req.body;
+// 接続人数カウント
+let connectedClientsCount = 0;
+// 問題管理
+let questionNumber = 0;
+let questionAnswer;
+let answeredClientsCount = 0;
+let userAnswers = loadAnswerData();
+
+io.on('connection', (socket) => {
+    connectedClientsCount++;
+    socket.on('disconnect', () => {
+        connectedClientsCount--;
+        io.emit('updateCount', connectedClientsCount);
+    });
+    // ユーザからのメッセージ送信用(管理者向け)
+    socket.on('/sendChatToHost', (id, message) => {
+        const userData = loadUserData();
+        const username = userData[id] ? userData[id].username : 'Unknown User';
+        // ユーザ名とメッセージを保存
+        chatData[MessagesCount] = { username, message };
+        MessagesCount++;
+        saveChatData(chatData);
+        // 管理者画面にユーザ名とメッセージを表示
+        io.emit('showChatToHost', username, message);
+    });
+    // ユーザからのメッセージ送信用(全員向け)
+    socket.on('/sendChatToAll', (id, message) => {
+        const userData = loadUserData();
+        const username = userData[id] ? userData[id].username : 'Unknown User';
+        // ユーザ名とメッセージを保存
+        chatData[MessagesCount] = { username, message };
+        MessagesCount++;
+        saveChatData(chatData);
+        // 管理者画面にユーザ名とメッセージを表示
+        io.emit('showChatToAll', username, message);
+    });
+    // 管理者からのメッセージ一斉送信用
+    socket.on('/broadcastToAll', (message) => {
         const username = '管理者';
         // ユーザ名とメッセージを保存
         chatData[MessagesCount] = { username, message };
         MessagesCount++;
         saveChatData(chatData);
-            // 管理者画面にユーザ名とメッセージを表示
-        io.emit('showChatToAll', { username, message });
-    }
-});
+        // 管理者画面にユーザ名とメッセージを表示
+        io.emit('showChatToAll', username, message);
+    });
+    // 接続人数のカウント用
+    socket.on('/updateCount', () => {
+        socket.emit('updateCount', connectedClientsCount, answeredClientsCount);
+    });
 
-// ***************************************************************************
-// 接続人数カウント
-let connectedClientsCount = 0;
-io.on('connection', (socket) => {
-    console.log('A client connected');
-    connectedClientsCount++;
-    socket.on('disconnect', () => {
-        console.log('A client disconnected');
-        connectedClientsCount--;
-        updateConnectedClientsCount();
+    // 問題出題用(管理者)
+    socket.on('/sendQuestionByHost', (Question, CorrectAnswer) => {
+        questionNumber = Question.no;
+        questionAnswer = CorrectAnswer;
+        answeredClientsCount = 0;
+        userAnswers = loadAnswerData();
+        // 問題出題(参加者)
+        io.emit('showQuestion', Question, null);
+    });
+    // 問題回答(参加者)
+    socket.on('/sendAnswer', (id, Answer) => {
+        answeredClientsCount++;
+        if (!userAnswers[id]) {
+            userAnswers[id] = {};
+        }
+        // 正誤判定
+        let Result = null;
+        let date = new Date();
+        if (questionAnswer != null) {
+            if (questionAnswer == Answer) {
+                Result = true;
+            }else{
+                Result = false;
+            }
+        }
+        userAnswers[id][questionNumber] = { Result, Answer, answeredClientsCount, date }
+        if (Result != null){
+            // 正誤判定送付(即時判定可能時のみ)
+            socket.emit('showAnswer', id, Result);
+        }
+    });
+    // 回答終了(管理者)
+    socket.on('/stopQuestionByHost', () => {
+        saveAnswerData(userAnswers);
+        // 回答終了(参加者)
+        io.emit('stopQuestion');
+    });
+    // 結果送付(管理者)
+    socket.on('/sendAnswerByHost', (Question, CorrectAnswer) => {
+        saveAnswerData(userAnswers);
+        //集計処理
+        let answerDistribution = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
+        for (let id in userAnswers) {
+            let userResult = userAnswers[id];
+            for (let questionNum in userResult) {
+                if (questionNum == questionNumber) {
+                    answerDistribution[userResult[questionNum].Answer]++;
+                }
+            }
+        }
+        // 修正処理
+        Question.answerA = Question.answerA + '<br><br>' + answerDistribution['A'] + '人';
+        Question.answerB = Question.answerB + '<br><br>' + answerDistribution['B'] + '人';
+        Question.answerC = Question.answerC + '<br><br>' + answerDistribution['C'] + '人';
+        Question.answerD = Question.answerD + '<br><br>' + answerDistribution['D'] + '人';
+        if (CorrectAnswer == null){
+            CorrectAnswer = Object.keys(answerDistribution).reduce((a,b)=>answerDistribution[a]>answerDistribution[b]? a:b);
+        }
+        // 結果表示(参加者)
+        io.emit('showQuestion', Question, CorrectAnswer);
+    });
+    // 順位表示(管理者)
+    socket.on('/showRankByHost', () => {
+        saveAnswerData(userAnswers);
+        const userData = loadUserData();
+
+        //集計処理
+        let aggregateResults = {};
+        for (let id in userAnswers) {
+            let userResult = userAnswers[id];
+            let correctCount = 0;
+            let speedBounus = 0;
+
+            for (let questionNum in userResult) {
+                if (userResult[questionNum].Result) {
+                    correctCount++;
+                    if (userResult[questionNum].answeredClientsCount <= 3) {
+                        speedBounus++;
+                    }
+                }
+            }
+            let username = userData[id].username;
+            aggregateResults[id] = { username, correctCount, speedBounus };
+        }
+        // 順位表示(参加者)
+        io.emit('showRank', aggregateResults);
+    });
+    // 回答記録初期化用
+    socket.on('/resetQuestion', () => {
+        userAnswers = {};
+        saveAnswerData(userAnswers);
     });
 });
-app.get('/connectedClients', (req, res) => {
-    res.json({ count: connectedClientsCount });
-});
-function updateConnectedClientsCount() {
-    io.emit('updateConnectedClients', connectedClientsCount);
-}
-
 
 // ***************************************************************************
 // サーバーの開始

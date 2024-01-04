@@ -24,26 +24,73 @@
 <body class="default_text">
     <div id="Area_Top">
         <div id="showClock" class="shadow"></div>
-        <button id="connectsBtn" class="Btn action_button default_text small_text">接続数:<span id="connectedClients">0</span>人</button>
+        <button id="connectsBtn" class="Btn action_button default_text small_text">接続:<span
+                id="connectedClients">0</span>人</button>
+        <button id="answeredBtn" class="Btn action_button default_text small_text">回答:<span
+                id="answeredClients">0</span>人</button>
         <button id="muteBtn" class="Btn action_button default_text small_text" onclick="mute(this)">🔇消音</button>
         <button id="clientNameDisplay" class="Btn action_button default_text small_text">管理者</button>
     </div>
     <div id="Area_Tab">
         <div class="Item_Tab_Area">
             <button id="Item_TabA" class="Item_Tab FullSize Btn default_text Selected"
-                onclick="selectTab('Area_Show', 'Item_Tab', 'A');">Tab A</button>
+                onclick="selectTab('Area_Show', 'Item_Tab', 'A');">クイズ</button>
         </div>
         <div class="Item_Tab_Area">
             <button id="Item_TabB" class="Item_Tab FullSize Btn default_text"
-                onclick="selectTab('Area_Show', 'Item_Tab', 'B');">Tab B</button>
+                onclick="selectTab('Area_Show', 'Item_Tab', 'B');">順位</button>
         </div>
         <div class="Item_Tab_Area">
             <button id="Item_TabC" class="Item_Tab FullSize Btn default_text"
                 onclick="selectTab('Area_Show', 'Item_Tab', 'C');">チャット</button>
         </div>
     </div>
-    <div id="Area_ShowA" class="Area_Show"></div>
-    <div id="Area_ShowB" class="Area_Show" style="display: none;"></div>
+    <div id="Area_ShowA" class="Area_Show">
+        <div id="Area_GameAction">
+            <button class="Btn default_text" onclick="prevQuestion()">-</button>
+            <span id="questionNumber" class="default_text">例題</span>
+            <button class="Btn default_text" onclick="nextQuestion()">+</button>
+            <select id="choiceAnswer" class="Btn default_text" name="choiceAnswer">
+                <option value="A">答え: A</option>
+                <option value="B">答え: B</option>
+                <option value="C">答え: C</option>
+                <option value="D">答え: D</option>
+                <option value="null">多数決</option>
+            </select>
+            <button class="Btn default_text" onclick="subTimer()">-</button>
+            <span id="timerNumber" class="default_text">100秒</span>
+            <button class="Btn default_text" onclick="addTimer()">+</button>
+            <button class="Btn default_text" onclick="sendQuestionByHost()">出題</button>
+            <button class="Btn default_text" onclick="stopQuestionByHost()">締切</button>
+            <button class="Btn default_text" onclick="sendAnswerByHost()">結果</button>
+            <!-- <button class="Btn default_text" onclick="showRankByHost()">順位</button>
+            <button class="Btn default_text"
+                onclick="showAlert('確認','結果を初期化してよろしいですか?','confirm','resetQuestion()')">初期化</button> -->
+        </div>
+        <input id="Area_GameQuestion" class="default_text"></input>
+        <div id="Area_GameAnswer">
+            <input id='Item_AnswerA' class='Btn Item_AnswerTile default_text'></input>
+            <input id='Item_AnswerB' class='Btn Item_AnswerTile default_text'></input>
+            <input id='Item_AnswerC' class='Btn Item_AnswerTile default_text'></input>
+            <input id='Item_AnswerD' class='Btn Item_AnswerTile default_text'></input>
+        </div>
+        <div id="Area_GameSelect">
+            <button class="Item_GameSelect Btn default_text" onclick="selectQuestion('input')">入力</button>
+            <button class="Item_GameSelect Btn default_text" onclick="selectQuestion('1')">Q01</button>
+            <button class="Item_GameSelect Btn default_text" onclick="selectQuestion('2')">Q02</button>
+            <button class="Item_GameSelect Btn default_text" onclick="selectQuestion('3')">Q03</button>
+            <button class="Item_GameSelect Btn default_text" onclick="selectQuestion('4')">Q04</button>
+            <button class="Item_GameSelect Btn default_text" onclick="selectQuestion('5')">Q05</button>
+        </div>
+    </div>
+    <div id="Area_ShowB" class="Area_Show" style="display: none;">
+        <div id="Area_GameAction">
+            <button class="Btn default_text" onclick="showRankByHost()">順位</button>
+            <button class="Btn default_text"
+                onclick="showAlert('確認','結果を初期化してよろしいですか?','confirm','resetQuestion()')">初期化</button>
+        </div>
+        <div id="Area_RankDisplay"></div>
+    </div>
     <div id="Area_ShowC" class="Area_Show" style="display: none;">
         <div id="Area_ChatDisplay"></div>
         <div id="Area_ChatInput">
@@ -61,6 +108,76 @@
     </div>
 
     <style>
+        #Area_GameAction {
+            background-color: var(--use-color-c1);
+            width: 100%;
+            height: 5vh;
+            position: absolute;
+            top: 0vh;
+            left: 50%;
+            border: solid 3px white;
+            transform: translate(-50%, -20%);
+        }
+
+        #Area_GameQuestion {
+            background-color: var(--use-color-c1);
+            width: 90vw;
+            height: 14vh;
+            position: absolute;
+            top: 7vh;
+            left: 50%;
+            border: solid 3px white;
+            transform: translate(-50%, 0%);
+        }
+
+        #Area_GameAnswer {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 5px;
+            width: 90vw;
+            height: 44vh;
+            position: absolute;
+            left: 50%;
+            top: 24vh;
+            transform: translate(-50%, 0%);
+        }
+
+        #Area_GameSelect {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 5px;
+            background-color: var(--use-color-c1);
+            width: 100%;
+            height: 11vh;
+            position: absolute;
+            top: 70vh;
+            left: 50%;
+            border: solid 3px white;
+            transform: translate(-50%, 0%);
+        }
+
+        .Item_AnswerTile {
+            width: calc(45vw - 10px);
+            height: 20vh;
+        }
+
+        .Item_GameSelect {
+            width: 10vw;
+            height: 5vh;
+        }
+
+        .Item_RankDisplay {
+            width: 80vw;
+            height: 8vh;
+            position: relative;
+            left: calc(10vw - 6px);
+            top: 5vh;
+            border-radius: 30px;
+            background-color: var(--use-color-b1);
+            border: solid 3px var(--use-color-a1);
+        }
     </style>
     <script>
         setInterval('showClock("showClock")', 1000);
@@ -69,7 +186,7 @@
         function mute(obj) {
             if (muting == true) {
                 muting = false;
-                obj.innerHTML = "🎵 通知中 "
+                obj.innerHTML = "🎵通知"
             } else if (muting == false) {
                 stopAllAlarms();
                 muting = true;
@@ -79,18 +196,60 @@
 
         // サーバーからのメッセージを受信
         const socket = io();
-        socket.on('showChatToAll', (data) => {
+        socket.on('showChatToAll', (username, message) => {
             let myname = document.getElementById('clientNameDisplay').innerHTML
-            if (data.username != myname) {
-                banner('メッセージ受信', `${data.username}さん: ${data.message}`);
-                addChatTile("Other", "Me", data.username, data.message);
-            }else{
-                addChatTile("Me", "All", "管理者", data.message);
+            if (username != myname) {
+                banner('メッセージ受信', `${username}さん: ${message}`);
+                addChatTile("Other", "Me", username, message);
+            } else {
+                addChatTile("Me", "All", myname, message);
             }
         });
-        socket.on('showChatToHost', (data) => {
-            banner('DM受信', `${data.username}さん: ${data.message}`);
-            addChatTile("Other", "Me", data.username, data.message);
+        socket.on('showChatToHost', (username, message) => {
+            banner('DM受信', `${username}さん: ${message}`);
+            addChatTile("Other", "Me", username, message);
+        });
+        socket.on('updateCount', (connectedClientsCount,answeredClientsCount) => {
+            document.getElementById('connectedClients').innerText = connectedClientsCount;
+            document.getElementById('answeredClients').innerText = answeredClientsCount;
+        });
+        socket.on('showResult', (result) => {
+            const sumObj = {};
+            for (const [key, value] of Object.entries(result)) {
+                sumObj[key] = {
+                    total: value.correctCount + value.speedBounus,
+                    correctCount: value.correctCount,
+                    speedBounus: value.speedBounus,
+                    username: value.username
+                };
+            }
+
+            const sortedArray = Object.entries(sumObj).sort((a, b) => b[1].total - a[1].total);
+            resetItemInArea(['RankDisplay']);
+            selectTab('Area_Show', 'Item_Tab', 'B');
+            sortedArray.forEach(([key, value]) => {
+                addRankTile(value.username, value.total, value.correctCount, value.speedBounus)
+                console.log(`${value.username}:${value.total} (${value.correctCount},${value.speedBounus})`);
+            });
+        });
+        socket.on('showRank', (result) => {
+            const sumObj = {};
+            for (const [key, value] of Object.entries(result)) {
+                sumObj[key] = {
+                    total: value.correctCount + value.speedBounus,
+                    correctCount: value.correctCount,
+                    speedBounus: value.speedBounus,
+                    username: value.username
+                };
+            }
+
+            const sortedArray = Object.entries(sumObj).sort((a, b) => b[1].total - a[1].total);
+            resetItemInArea(['RankDisplay']);
+            selectTab('Area_Show', 'Item_Tab', 'B');
+            sortedArray.forEach(([key, value]) => {
+                addRankTile(value.username, value.total, value.correctCount, value.speedBounus)
+                // console.log(`${value.username}:${value.total} (${value.correctCount},${value.speedBounus})`);
+            });
         });
 
         // チャット送信
@@ -107,25 +266,9 @@
                     break;
                 }
             }
-
-            try {
-                // サーバーにメッセージを送信
-                const response = await fetch(`/broadcastTo${messageTo}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `message=${encodeURIComponent(message)}`,
-                });
-
-                if (response.ok) {
-                    banner('送信成功', 'メッセージを送信しました。');
-                } else {
-                    banner('送信失敗', 'もう一度やり直してください。');
-                }
-            } catch (error) {
-                console.error('送信エラー:', error);
-            }
+            // サーバーにメッセージを送信
+            socket.emit(`/broadcastTo${messageTo}`, message);
+            document.getElementById('message').value = '';
         }
 
         function addChatTile(From = "Host", To = "Me", Name, Message) {
@@ -142,19 +285,175 @@
             ChatTile.innerHTML = `${Name}さん (${formattedTime})<br>${Message}`;
             document.getElementById('Area_ChatDisplay').appendChild(ChatTile);
         }
+        function addRankTile(Name, Total, Correct, Bounus) {
+            var RankTile = document.createElement('div');
+            RankTile.className = 'Item_RankDisplay';
+            RankTile.innerHTML = `${Name}さん : ${Total}pt<br>(正解数:${Correct}pt,ボーナス${Bounus}pt)`;
+            document.getElementById('Area_RankDisplay').appendChild(RankTile);
+        }
 
-        async function updateConnectedClientsCount() {
-            try {
-                // サーバーからクライアント数を取得
-                const response = await fetch('/connectedClients');
-                const data = await response.json();
-                // クライアント数を表示
-                document.getElementById('connectedClients').innerText = data.count;
-            } catch (error) {
-                console.error('接続数取得エラー:', error);
+        let questionNumber = 0;
+        let timerNumber = 100;
+        function prevQuestion() {
+            if (questionNumber > 0) {
+                questionNumber--;
+            }
+            reflectQuestion();
+        }
+        function nextQuestion() {
+            questionNumber++;
+            reflectQuestion();
+        }
+        function reflectQuestion() {
+            if (questionNumber == 0) {
+                document.getElementById('questionNumber').innerHTML = '例題';
+            } else {
+                document.getElementById('questionNumber').innerHTML = 'No.' + questionNumber
             }
         }
-        setInterval('updateConnectedClientsCount()', 1000);
+        function subTimer() {
+            if (timerNumber >= 5) {
+                timerNumber -= 5;
+            }
+            reflectTimer();
+        }
+        function addTimer() {
+            timerNumber += 5;
+            reflectTimer();
+        }
+        function reflectTimer() {
+            if (timerNumber <= 0) {
+                document.getElementById('timerNumber').innerHTML = 'なし';
+            } else {
+                document.getElementById('timerNumber').innerHTML = timerNumber + '秒'
+            }
+        }
+
+        function getQuestion(){
+            let Question = {
+                "no": questionNumber,
+                "question": document.getElementById('Area_GameQuestion').value,
+                "answerA": document.getElementById('Item_AnswerA').value,
+                "answerB": document.getElementById('Item_AnswerB').value,
+                "answerC": document.getElementById('Item_AnswerC').value,
+                "answerD": document.getElementById('Item_AnswerD').value,
+                "timer": timerNumber,
+            }
+            return Question
+        }
+        function getAnswer(){
+            let Answer = document.getElementById('choiceAnswer');
+            let CorrectAnswer = Answer.options[Answer.selectedIndex].value;
+            if (CorrectAnswer == 'null'){
+                CorrectAnswer = null;
+            }
+            return CorrectAnswer
+        }
+
+        function sendQuestionByHost() {
+            Question = getQuestion();
+            CorrectAnswer = getAnswer();
+            socket.emit('/sendQuestionByHost', Question, CorrectAnswer);
+        }
+        function stopQuestionByHost() {
+            socket.emit('/stopQuestionByHost');
+        }
+        function sendAnswerByHost() {
+            Question = getQuestion();
+            CorrectAnswer = getAnswer();
+            socket.emit('/sendAnswerByHost', Question, CorrectAnswer);
+        }
+        function showRankByHost() {
+            socket.emit('/showRankByHost');
+        }
+
+        function updateCount() {
+            socket.emit('/updateCount');
+        }
+        setInterval('updateCount()', 1000);
+
+        let AnswerList = {
+            "1": { "answer": 1 },
+            "2": { "answer": 1 },
+            "3": { "answer": 3 },
+            "4": { "answer": 1 },
+            "5": { "answer": 1 },
+        }
+
+        let QuestionList = {
+            "1": {
+                "question": "飛行機の機内食用に開発された野菜は？",
+                "answerA": "アボカド",
+                "answerB": "ミニトマト",
+                "answerC": "パプリカ",
+                "answerD": "芽キャベツ",
+                "timer": 10,
+            },
+            "2": {
+                "question": "砂糖は昔、何に活用されていた？",
+                "answerA": "頭痛薬",
+                "answerB": "風邪薬",
+                "answerC": "胃痛薬",
+                "answerD": "解熱剤",
+                "timer": 20,
+            },
+            "3": {
+                "question": "ことわざ「急がば回れ」の語源となった場所はどこ？",
+                "answerA": "富士山",
+                "answerB": "清水寺",
+                "answerC": "厳島神社",
+                "answerD": "琵琶湖",
+                "timer": 30,
+            },
+            "4": {
+                "question": "たい焼きは元々鯛ではなく何の形をしていた？",
+                "answerA": "クマ",
+                "answerB": "カメ",
+                "answerC": "ヒヨコ",
+                "answerD": "ネコ",
+                "timer": 100,
+            },
+            "5": {
+                "question": "野菜の名前が日本語ではないものは？",
+                "answerA": "レンコン",
+                "answerB": "オクラ",
+                "answerC": "ダイコン",
+                "answerD": "ネギ",
+                "timer": 100,
+            },
+        }
+
+
+        function selectQuestion(No) {
+            if (No == 'input') {
+                questionNumber = 0;
+                reflectQuestion();
+                timerNumber = 10;
+                reflectTimer();
+                document.getElementById('Area_GameQuestion').value = '';
+                document.getElementById('Item_AnswerA').value = '';
+                document.getElementById('Item_AnswerB').value = '';
+                document.getElementById('Item_AnswerC').value = '';
+                document.getElementById('Item_AnswerD').value = '';
+                document.getElementById('choiceAnswer').selectedIndex = 0;
+            } else {
+                questionNumber = parseInt(No, 10);
+                reflectQuestion();
+                timerNumber = QuestionList[No].timer;
+                reflectTimer();
+                document.getElementById('Area_GameQuestion').value = QuestionList[No].question;
+                document.getElementById('Item_AnswerA').value = QuestionList[No].answerA;
+                document.getElementById('Item_AnswerB').value = QuestionList[No].answerB;
+                document.getElementById('Item_AnswerC').value = QuestionList[No].answerC;
+                document.getElementById('Item_AnswerD').value = QuestionList[No].answerD;
+                document.getElementById('choiceAnswer').selectedIndex = AnswerList[No].answer;
+            }
+        }
+        // 回答記録初期化※注意
+        function resetQuestion() {
+            socket.emit('/resetQuestion');
+        }
+
     </script>
 </body>
 

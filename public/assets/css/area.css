@@ -18,19 +18,30 @@
 
 
 #connectsBtn,
+#answeredBtn,
 #muteBtn,
 #clientNameDisplay {
     position: absolute;
     top: 10%;
-    width: 15vw;
     height: 5.5vh;
     color: white;
     font-size: 16px;
 }
 
+#connectsBtn,
+#answeredBtn{
+    width: 20vw;
+}
+#muteBtn,
+#clientNameDisplay {
+    width: 15vw;
+}
+
 #connectsBtn {
-    left: 40vw;
-    width: 25vw;
+    left: 28vw;
+}
+#answeredBtn {
+    left: 49vw;
 }
 
 #muteBtn {

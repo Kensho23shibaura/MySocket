@@ -31,19 +31,29 @@
     <div id="Area_Tab">
         <div class="Item_Tab_Area">
             <button id="Item_TabA" class="Item_Tab FullSize Btn default_text Selected"
-                onclick="selectTab('Area_Show', 'Item_Tab', 'A');">Tab A</button>
+                onclick="selectTab('Area_Show', 'Item_Tab', 'A');">クイズ</button>
         </div>
         <div class="Item_Tab_Area">
             <button id="Item_TabB" class="Item_Tab FullSize Btn default_text"
-                onclick="selectTab('Area_Show', 'Item_Tab', 'B');">Tab B</button>
+                onclick="selectTab('Area_Show', 'Item_Tab', 'B');">順位</button>
         </div>
         <div class="Item_Tab_Area">
             <button id="Item_TabC" class="Item_Tab FullSize Btn default_text"
                 onclick="selectTab('Area_Show', 'Item_Tab', 'C');">チャット</button>
         </div>
     </div>
-    <div id="Area_ShowA" class="Area_Show"></div>
-    <div id="Area_ShowB" class="Area_Show" style="display: none;"></div>
+    <div id="Area_ShowA" class="Area_Show">
+        <div id="Area_GameQuestion"><br>出題されるまでお待ちください</div>
+        <div id="Area_GameAnswer">
+            <button id='Item_AnswerA' class='Btn Item_AnswerTile default_text'>???</button>
+            <button id='Item_AnswerB' class='Btn Item_AnswerTile default_text'>???</button>
+            <button id='Item_AnswerC' class='Btn Item_AnswerTile default_text'>???</button>
+            <button id='Item_AnswerD' class='Btn Item_AnswerTile default_text'>???</button>
+        </div>
+    </div>
+    <div id="Area_ShowB" class="Area_Show" style="display: none;">
+        <div id="Area_RankDisplay"></div>
+    </div>
     <div id="Area_ShowC" class="Area_Show" style="display: none;">
         <div id="Area_ChatDisplay"></div>
         <div id="Area_ChatInput">
@@ -69,7 +79,7 @@
         function mute(obj) {
             if (muting == true) {
                 muting = false;
-                obj.innerHTML = "🎵 通知中 "
+                obj.innerHTML = "🎵通知"
             } else if (muting == false) {
                 stopAllAlarms();
                 muting = true;
@@ -79,20 +89,59 @@
 
         // サーバーからのメッセージを受信
         const socket = io();
-        socket.on('showChatToAll', (data) => {
+        socket.on('showChatToAll', (username, message) => {
             let myname = document.getElementById('clientNameDisplay').innerHTML
-            if (data.username != myname) {
-                banner('メッセージ受信', `${data.username}さん: ${data.message}`);
-                addChatTile("Other", "Me", data.username, data.message);
+            if (username != myname) {
+                banner('メッセージ受信', `${username}さん: ${message}`);
+                addChatTile("Other", "Me", username, message);
             } else {
-                addChatTile("Me", "All", myname, data.message);
+                addChatTile("Me", "All", myname, message);
             }
         });
-        socket.on('showChatToHost', (data) => {
+        socket.on('showChatToHost', (username, message) => {
             let myname = document.getElementById('clientNameDisplay').innerHTML
-            if (data.username == myname) {
-                addChatTile("Me", "Host", data.username, data.message);
+            if (username == myname) {
+                addChatTile("Me", "Host", username, message);
             }
+        });
+        socket.on('showQuestion', (Question, CorrectAnswer = null) => {
+            selectTab('Area_Show', 'Item_Tab', 'A');
+            // console.log(Question);
+            addQuestionTile(Question, CorrectAnswer);
+        });
+        socket.on('stopQuestion', () => {
+            banner('回答終了', '');
+            stopAnswer();
+        });
+        socket.on('showAnswer', (id, result) => {
+            const clientId = document.getElementById('clientIdDisplay').innerText;
+            if (clientId == id) {
+                let resultTxt = '不正解。残念…'
+                if (result) {
+                    resultTxt = '正解！さすが！！'
+                }
+                banner('結果表示', `${resultTxt}`);
+            }
+        });
+        socket.on('showRank', (result) => {
+            stopAnswer();
+            const sumObj = {};
+            for (const [key, value] of Object.entries(result)) {
+                sumObj[key] = {
+                    total: value.correctCount + value.speedBounus,
+                    correctCount: value.correctCount,
+                    speedBounus: value.speedBounus,
+                    username: value.username
+                };
+            }
+
+            const sortedArray = Object.entries(sumObj).sort((a, b) => b[1].total - a[1].total);
+            resetItemInArea(['RankDisplay']);
+            selectTab('Area_Show', 'Item_Tab', 'B');
+            sortedArray.forEach(([key, value]) => {
+                addRankTile(value.username, value.total, value.correctCount, value.speedBounus)
+                // console.log(`${value.username}:${value.total} (${value.correctCount},${value.speedBounus})`);
+            });
         });
 
         // チャット送信
@@ -110,25 +159,9 @@
                     break;
                 }
             }
-
-            try {
-                // サーバーにメッセージを送信
-                const response = await fetch(`/sendChatTo${messageTo}/${clientId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `message=${encodeURIComponent(message)}`,
-                });
-
-                if (response.ok) {
-                    banner('送信成功', 'メッセージを送信しました。');
-                } else {
-                    banner('送信失敗', 'もう一度やり直してください。');
-                }
-            } catch (error) {
-                console.error('送信エラー:', error);
-            }
+            // サーバーにメッセージを送信
+            socket.emit(`/sendChatTo${messageTo}`, clientId, message);
+            document.getElementById('message').value = '';
         }
 
         function addChatTile(From = "Host", To = "Me", Name, Message) {
@@ -145,7 +178,101 @@
             ChatTile.innerHTML = `${Name}さん (${formattedTime})<br>${Message}`;
             document.getElementById('Area_ChatDisplay').appendChild(ChatTile);
         }
+        function addQuestionTile(Question, CorrectAnswer = null) {
+            var QuestionTile = document.createElement('div');
+            document.getElementById('Area_GameQuestion').innerHTML = `No.${Question.no}<br>${Question.question}`;
+
+            document.getElementById('Item_AnswerA').innerHTML = Question.answerA;
+            document.getElementById('Item_AnswerB').innerHTML = Question.answerB;
+            document.getElementById('Item_AnswerC').innerHTML = Question.answerC;
+            document.getElementById('Item_AnswerD').innerHTML = Question.answerD;
+            document.getElementById('Item_AnswerA').className = 'Btn Item_AnswerTile default_text';
+            document.getElementById('Item_AnswerB').className = 'Btn Item_AnswerTile default_text';
+            document.getElementById('Item_AnswerC').className = 'Btn Item_AnswerTile default_text';
+            document.getElementById('Item_AnswerD').className = 'Btn Item_AnswerTile default_text';
+            if (CorrectAnswer === null) {
+                document.getElementById('Item_AnswerA').setAttribute('onclick', 'sendAnswer("A")');
+                document.getElementById('Item_AnswerB').setAttribute('onclick', 'sendAnswer("B")');
+                document.getElementById('Item_AnswerC').setAttribute('onclick', 'sendAnswer("C")');
+                document.getElementById('Item_AnswerD').setAttribute('onclick', 'sendAnswer("D")');
+                var time = document.createElement('div');
+                time.innerHTML = `Time : ${Question.timer} sec.`;
+                time.className = "Position_RightDown";
+                document.getElementById('Area_GameQuestion').appendChild(time);
+                var timeout = setInterval(function (time) { time.innerHTML = "Time : " + (parseInt(time.innerHTML.replace(/[^0-9]/g, "")) - 1) + " sec."; }, 1000, time);
+                setTimeout(function (time, timeout) { clearInterval(timeout); stopAnswer(); time.remove(time); }, (parseInt(Question.timer)*1000 + 1000), time, timeout);
+            } else {
+                document.getElementById(`Item_Answer${CorrectAnswer}`).className = 'Btn Item_AnswerTile default_text CorrectAnswer';
+            }
+        }
+        function addRankTile(Name, Total, Correct, Bounus) {
+            var RankTile = document.createElement('div');
+            RankTile.className = 'Item_RankDisplay';
+            RankTile.innerHTML = `${Name}さん : ${Total}pt<br>(正解数:${Correct}pt,ボーナス${Bounus}pt)`;
+            document.getElementById('Area_RankDisplay').appendChild(RankTile);
+        }
+
+        function sendAnswer(answer) {
+            stopAnswer();
+            const clientId = document.getElementById('clientIdDisplay').innerText;
+            socket.emit('/sendAnswer', clientId, answer);
+        }
+        function stopAnswer() {
+            document.getElementById('Item_AnswerA').removeAttribute('onclick');
+            document.getElementById('Item_AnswerB').removeAttribute('onclick');
+            document.getElementById('Item_AnswerC').removeAttribute('onclick');
+            document.getElementById('Item_AnswerD').removeAttribute('onclick');
+        }
     </script>
+    <style>
+        .CorrectAnswer {
+            background-color: brown;
+        }
+
+        .Position_RightDown{
+            position: absolute;
+            right: 5px;
+            bottom: 5px;
+        }
+
+        #Area_GameQuestion {
+            background-color: var(--use-color-c1);
+            width: 90vw;
+            height: 20vh;
+            position: absolute;
+            left: 50%;
+            border: solid 3px white;
+            transform: translate(-50%, 0%);
+        }
+
+        #Area_GameAnswer {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 5px;
+            width: 90vw;
+            height: 50vh;
+            position: absolute;
+            left: 50%;
+            top: 25vh;
+            transform: translate(-50%, 0%);
+        }
+
+        .Item_AnswerTile {
+            width: calc(45vw - 10px);
+            height: 25vh;
+        }
+
+        .Item_RankDisplay {
+            width: 78vw;
+            height: 8vh;
+            position: relative;
+            left: 10vw;
+            border-radius: 30px;
+            background-color: var(--use-color-b1);
+            border: solid 3px var(--use-color-a1);
+        }
+    </style>
 </body>
 
 </html>
